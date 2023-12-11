@@ -1,0 +1,6 @@
+prisma 
+zod
+ts-rest 
+typescript
+
+
