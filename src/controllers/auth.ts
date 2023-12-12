@@ -6,53 +6,49 @@ import { JWT_SECRET } from "../secret";
 import { BadRequest } from "../exceptions/bad-request";
 import { ErrorCode } from "../exceptions/root";
 import { SignupSchema } from "../schema/users";
-import { UnproccessableEntity } from "../exceptions/validation";
+import { NotFoundException } from "../exceptions/not-found";
 
 
 
 export const login = async(req:Request, res:Response,next:NextFunction) => {
 
-    try {
 
     const {email,password} = req.body;
             const user = await prismaClient.user.findFirst({where:{email}});
             if(!user){
-                throw Error("User doesnot exist");
+                throw  new  NotFoundException("User not found",ErrorCode.USER_NOT_FOUND)
             }
 
             if(!compareSync(password,user.password)){
-                throw Error("Invalid credentials");
+                throw new BadRequest("Incorrect password",ErrorCode.INCORRECT_PASSWORD)
             }
 
             let token = jwt.sign({
                 userId:user.id,
             },JWT_SECRET)
             res.status(200).json({message:{...user,token},success:true})
-    } catch (error:any) {
-            next(new UnproccessableEntity(error?.issues,"Unproccessable Entity",ErrorCode.UNPROCESSABEL_ENTITY))
-    }
-
+   
 }
 
 export const Register = async(req:Request, res:Response,next:NextFunction) => {
-    try {
     SignupSchema.parse(req.body)
     const {email,password,name} = req.body;
-
         const user = await prismaClient.user.findFirst({where:{email}})
         if(user){
-           next(new BadRequest("User already exists",ErrorCode.USER_ALEADY_EXIST));
+          throw new BadRequest("User already exists",ErrorCode.USER_ALEADY_EXIST)
         }
         const newUser = await prismaClient.user.create({data:{
             email,
             name,
             password:hashSync(password,10)
         }})
-
         res.status(200).json({message:newUser,success:true})
         
-    } catch (error) {
-         next(new UnproccessableEntity(error?.issues,"Unproccessable Entity",ErrorCode.UNPROCESSABEL_ENTITY))
-    }
+   
+}
 
+export const Me = async(req:Request, res:Response,next:NextFunction) => {
+    res.json({message:req.user,success:true})
+        
+   
 }
