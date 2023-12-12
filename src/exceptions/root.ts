@@ -11,10 +11,12 @@ export class HttpException extends Error{
         this.statusCode = statusCode;
         this.errors = errors;
     }
+
 }
 
 export enum ErrorCode{
     USER_NOT_FOUND = 1001,
     USER_ALEADY_EXIST=1002,
-    INCORRECT_PASSWORD=1003
+    INCORRECT_PASSWORD=1003,
+    UNPROCESSABEL_ENTITY=1004,
 }

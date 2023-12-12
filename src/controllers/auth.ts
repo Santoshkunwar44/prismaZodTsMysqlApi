@@ -1,15 +1,20 @@
-import {Request,Response} from "express"
+import {NextFunction, Request,Response} from "express"
 import { prismaClient } from "../index";
 import {compareSync, hashSync} from "bcrypt"
 import jwt from "jsonwebtoken"
 import { JWT_SECRET } from "../secret";
+import { BadRequest } from "../exceptions/bad-request";
+import { ErrorCode } from "../exceptions/root";
+import { SignupSchema } from "../schema/users";
+import { UnproccessableEntity } from "../exceptions/validation";
 
 
 
-export const login = async(req:Request, res:Response) => {
+export const login = async(req:Request, res:Response,next:NextFunction) => {
+
+    try {
 
     const {email,password} = req.body;
-    try {
             const user = await prismaClient.user.findFirst({where:{email}});
             if(!user){
                 throw Error("User doesnot exist");
@@ -23,20 +28,20 @@ export const login = async(req:Request, res:Response) => {
                 userId:user.id,
             },JWT_SECRET)
             res.status(200).json({message:{...user,token},success:true})
-    } catch (error) {
-        res.status(500).json({message:error.message,success:false})  
+    } catch (error:any) {
+            next(new UnproccessableEntity(error?.issues,"Unproccessable Entity",ErrorCode.UNPROCESSABEL_ENTITY))
     }
 
 }
 
-export const Register = async(req:Request, res:Response) => {
-
+export const Register = async(req:Request, res:Response,next:NextFunction) => {
+    try {
+    SignupSchema.parse(req.body)
     const {email,password,name} = req.body;
 
-    try {
         const user = await prismaClient.user.findFirst({where:{email}})
         if(user){
-            throw Error("This email is already registered")
+           next(new BadRequest("User already exists",ErrorCode.USER_ALEADY_EXIST));
         }
         const newUser = await prismaClient.user.create({data:{
             email,
@@ -47,7 +52,7 @@ export const Register = async(req:Request, res:Response) => {
         res.status(200).json({message:newUser,success:true})
         
     } catch (error) {
-        res.status(500).json({message:error.message,success:false})
+         next(new UnproccessableEntity(error?.issues,"Unproccessable Entity",ErrorCode.UNPROCESSABEL_ENTITY))
     }
 
 }
